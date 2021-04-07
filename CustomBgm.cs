@@ -1,33 +1,29 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
-using GlobalEnums;
 using Modding;
 using UnityEngine;
 
 namespace CustomBgm
 {
-    class CustomBgm : Mod
+    public class CustomBgm : Mod
     {
         internal static CustomBgm Instance;
-
-        private readonly string FOLDER = "CustomBgm";
         private readonly string DIR;
 
-        public override string GetVersion()
-        {
-            Assembly asm = Assembly.GetExecutingAssembly();
-            string ver = asm.GetName().Version.ToString();
-            SHA1 sha1 = SHA1.Create();
-            FileStream stream = File.OpenRead(asm.Location);
-            byte[] hashBytes = sha1.ComputeHash(stream);
-            string hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
-            stream.Close();
-            sha1.Clear();
-            return $"{ver}-{hash.Substring(0, 6)}";
-        }
+        private readonly string FOLDER = "CustomBgm";
+
+        //private int[] memoryHugger1;
+        //private int[] memoryHugger2;
+        //private int[] memoryHugger3;
+        //private int[] memoryHugger4;
+        //private int[] memoryHugger5;
+        //private int[] memoryHugger6;
+        //private int[] memoryHugger7;
+        //private int[] memoryHugger8;
+        //private int[] memoryHugger9;
+        //private int[] memoryHugger10;
 
         public CustomBgm() : base("Custom Background Music")
         {
@@ -42,18 +38,50 @@ namespace CustomBgm
                     DIR = Path.GetFullPath(Application.dataPath + "/Managed/Mods/" + FOLDER);
                     break;
             }
-            if (!Directory.Exists(DIR))
-            {
-                Directory.CreateDirectory(DIR);
-            }
+
+            if (!Directory.Exists(DIR)) Directory.CreateDirectory(DIR);
 
             InitCallbacks();
+        }
+
+        public override string GetVersion()
+        {
+            var asm = Assembly.GetExecutingAssembly();
+            var ver = asm.GetName().Version.ToString();
+            var sha1 = SHA1.Create();
+            var stream = File.OpenRead(asm.Location);
+            var hashBytes = sha1.ComputeHash(stream);
+            var hash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+            stream.Close();
+            sha1.Clear();
+            return $"{ver}-{hash.Substring(0, 6)}";
         }
 
         public override void Initialize()
         {
             Log("Initializing");
             Instance = this;
+
+            //Log("Loading Hugger 1");
+            //memoryHugger1 = new int[536870912];
+            //Log("Loading Hugger 2");
+            //memoryHugger2 = new int[536870912];
+            //Log("Loading Hugger 3");
+            //memoryHugger3 = new int[536870912];
+            //Log("Loading Hugger 4");
+            //memoryHugger4 = new int[536870912];
+            //Log("Loading Hugger 5");
+            //memoryHugger5 = new int[536870912];
+            //Log("Loading Hugger 6");
+            //memoryHugger6 = new int[536870912];
+            //Log("Loading Hugger 7");
+            //memoryHugger7 = new int[536870912];
+            //Log("Loading Hugger 8");
+            //memoryHugger8 = new int[536870912];
+            //Log("Loading Hugger 9");
+            //memoryHugger9 = new int[536870912];
+            //Log("Loading Hugger 10");
+            //memoryHugger10 = new int[536870912];
 
             Log("Initialized");
         }
@@ -64,20 +92,22 @@ namespace CustomBgm
             On.AudioManager.ApplyMusicCue += OnAudioManagerApplyMusicCue;
         }
 
-        private void OnAudioManagerApplyMusicCue(On.AudioManager.orig_ApplyMusicCue orig, AudioManager self, MusicCue musicCue, float delayTime, float transitionTime, bool applySnapshot)
+        private void OnAudioManagerApplyMusicCue(On.AudioManager.orig_ApplyMusicCue orig, AudioManager self,
+            MusicCue musicCue, float delayTime, float transitionTime, bool applySnapshot)
         {
-            bool changed = false;
-            var infosFieldInfo = musicCue.GetType().GetField("channelInfos", BindingFlags.NonPublic | BindingFlags.Instance);
-            MusicCue.MusicChannelInfo[] infos = (MusicCue.MusicChannelInfo[]) infosFieldInfo.GetValue(musicCue);
+            var changed = false;
+            var infosFieldInfo = musicCue.GetType()
+                .GetField("channelInfos", BindingFlags.NonPublic | BindingFlags.Instance);
+            var infos = (MusicCue.MusicChannelInfo[]) infosFieldInfo.GetValue(musicCue);
 
-            foreach (MusicCue.MusicChannelInfo info in infos)
+            foreach (var info in infos)
             {
                 var audioFieldInfo = info.GetType().GetField("clip", BindingFlags.NonPublic | BindingFlags.Instance);
-                AudioClip origAudio = (AudioClip) audioFieldInfo.GetValue(info);
+                var origAudio = (AudioClip) audioFieldInfo.GetValue(info);
 
                 if (origAudio != null)
                 {
-                    AudioClip possibleReplace = GetAudioClip(origAudio.name);
+                    var possibleReplace = GetAudioClip(origAudio.name);
                     if (possibleReplace != null)
                     {
                         // Change Audio Clip
@@ -86,10 +116,8 @@ namespace CustomBgm
                     }
                 }
             }
-            if (changed)
-            {
-                infosFieldInfo.SetValue(musicCue, infos);
-            }
+
+            if (changed) infosFieldInfo.SetValue(musicCue, infos);
 
             orig(self, musicCue, delayTime, transitionTime, applySnapshot);
         }
@@ -101,6 +129,7 @@ namespace CustomBgm
                 Log($"Using audio file \"{origName}.wav\"");
                 return WavUtility.ToAudioClip($"{DIR}/{origName}.wav");
             }
+
             Log($"Using original for \"{origName}\"");
             return null;
         }
