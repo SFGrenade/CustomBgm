@@ -167,12 +167,12 @@ namespace CustomBgm
 
             var data = new float[wavSize];
 
-            var maxValue = sbyte.MaxValue;
+            float maxValue = sbyte.MaxValue;
 
             var i = 0;
             while (i < wavSize)
             {
-                data[i] = (float) source[i] / maxValue;
+                data[i] = Mathf.Clamp(source[i] / maxValue, -1.0f, 1.0f);
                 ++i;
             }
 
@@ -188,14 +188,14 @@ namespace CustomBgm
 
             var data = new float[convertedSize];
 
-            var maxValue = short.MaxValue;
+            float maxValue = short.MaxValue;
 
             var offset = 0;
             var i = 0;
             while (i < convertedSize)
             {
                 offset = i * x;
-                data[i] = (float) BitConverter.ToInt16(source, offset) / maxValue;
+                data[i] = Mathf.Clamp(BitConverter.ToInt16(source, offset) / maxValue, -1.0f, 1.0f);
                 ++i;
             }
 
@@ -209,7 +209,7 @@ namespace CustomBgm
             var x = 3; // block size = 3
             var convertedSize = wavSize / x;
 
-            var maxValue = int.MaxValue;
+            float maxValue = int.MaxValue; // 24 bits bit depth goes from -0x800000 to 0x7FFFFF, but apparently 24 bit uses 32 bit limits
 
             var data = new float[convertedSize];
 
@@ -221,7 +221,7 @@ namespace CustomBgm
             {
                 offset = i * x;
                 Buffer.BlockCopy(source, offset, block, 1, x);
-                data[i] = (float) BitConverter.ToInt32(block, 0) / maxValue;
+                data[i] = Mathf.Clamp(BitConverter.ToInt32(block, 0) / maxValue, -1.0f, 1.0f);
                 ++i;
             }
 
@@ -235,7 +235,7 @@ namespace CustomBgm
             var x = sizeof(float); //  block size = 4
             var convertedSize = wavSize / x;
 
-            var maxValue = int.MaxValue;
+            float maxValue = int.MaxValue;
 
             var data = new float[convertedSize];
 
@@ -244,7 +244,7 @@ namespace CustomBgm
             while (i < convertedSize)
             {
                 offset = i * x;
-                data[i] = (float) BitConverter.ToInt32(source, offset) / maxValue;
+                data[i] = Mathf.Clamp(BitConverter.ToInt32(source, offset) / maxValue, -1.0f, 1.0f);
                 ++i;
             }
 
