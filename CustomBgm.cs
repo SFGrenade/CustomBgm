@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -9,15 +10,12 @@ namespace CustomBgm
 {
     public class CustomBgm : Mod
     {
-        internal static CustomBgm? Instance;
         private readonly string _dir;
 
         private readonly string _folder = "CustomBgm";
 
         public CustomBgm() : base("Custom Background Music")
         {
-            Instance = this;
-
             _dir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? throw new DirectoryNotFoundException("I have no idea how you did this, but good luck figuring it out."), _folder);
 
             if (!Directory.Exists(_dir))
@@ -44,7 +42,6 @@ namespace CustomBgm
         public override void Initialize()
         {
             Log("Initializing");
-            Instance = this;
             
             Log("Initialized");
         }
@@ -52,41 +49,36 @@ namespace CustomBgm
         private void InitCallbacks()
         {
             // Hooks
-            On.AudioManager.ApplyMusicCue += OnAudioManagerApplyMusicCue;
+            On.AudioManager.BeginApplyMusicCue += OnAudioManagerBeginApplyMusicCue;
         }
 
-        private void OnAudioManagerApplyMusicCue(On.AudioManager.orig_ApplyMusicCue orig, AudioManager self,
-            MusicCue musicCue, float delayTime, float transitionTime, bool applySnapshot)
+        private IEnumerator OnAudioManagerBeginApplyMusicCue(On.AudioManager.orig_BeginApplyMusicCue orig, AudioManager self, MusicCue musicCue, float delayTime, float transitionTime, bool applySnapshot)
         {
             bool changed = false;
-            FieldInfo? infosFieldInfo = musicCue.GetType()
-                .GetField("channelInfos", BindingFlags.NonPublic | BindingFlags.Instance);
-            if (infosFieldInfo == null) return;
-            MusicCue.MusicChannelInfo[] infos = (MusicCue.MusicChannelInfo[]) infosFieldInfo.GetValue(musicCue);
+            MusicCue.MusicChannelInfo[] infos = ReflectionHelper.GetField<MusicCue, MusicCue.MusicChannelInfo[]>(musicCue, "channelInfos");
 
-            foreach (var info in infos)
+            foreach (MusicCue.MusicChannelInfo info in infos)
             {
-                var audioFieldInfo = info.GetType().GetField("clip", BindingFlags.NonPublic | BindingFlags.Instance);
-                var origAudio = (AudioClip?) audioFieldInfo?.GetValue(info);
+                AudioClip origAudio = ReflectionHelper.GetField<MusicCue.MusicChannelInfo, AudioClip>(info, "clip");
 
                 if (origAudio != null)
                 {
-                    var possibleReplace = GetAudioClip(origAudio.name);
+                    AudioClip possibleReplace = GetAudioClip(origAudio.name);
                     if (possibleReplace != null)
                     {
                         // Change Audio Clip
-                        audioFieldInfo?.SetValue(info, possibleReplace);
+                        ReflectionHelper.SetField<MusicCue.MusicChannelInfo, AudioClip>(info, "clip", possibleReplace);
                         changed = true;
                     }
                 }
             }
 
-            if (changed) infosFieldInfo.SetValue(musicCue, infos);
-
-            orig(self, musicCue, delayTime, transitionTime, applySnapshot);
+            if (changed) ReflectionHelper.SetField<MusicCue, MusicCue.MusicChannelInfo[]>(musicCue, "channelInfos", infos);
+            
+            yield return orig(self, musicCue, delayTime, transitionTime, applySnapshot);
         }
 
-        private AudioClip? GetAudioClip(string origName)
+        private AudioClip GetAudioClip(string origName)
         {
             if (File.Exists($"{_dir}/{origName}.wav"))
             {
