@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using Modding;
 using UnityEngine;
+using WavLib;
 
 namespace CustomBgm
 {
@@ -41,9 +42,9 @@ namespace CustomBgm
 
         public override void Initialize()
         {
-            Log("Initializing");
+            DebugLog("Initializing");
             
-            Log("Initialized");
+            DebugLog("Initialized");
         }
 
         private void InitCallbacks()
@@ -82,12 +83,40 @@ namespace CustomBgm
         {
             if (File.Exists($"{_dir}/{origName}.wav"))
             {
-                Log($"Using audio file \"{origName}.wav\"");
-                return WavUtility.ToAudioClip($"{_dir}/{origName}.wav");
+                DebugLog($"Using audio file \"{origName}.wav\"");
+                FileStream stream = File.OpenRead($"{_dir}/{origName}.wav");
+                WavData.Inspect(stream, DebugLog);
+                WavData wavData = new WavData();
+                wavData.Parse(stream, DebugLog);
+                stream.Close();
+
+                DebugLog($"{origName} - AudioFormat: {wavData.FormatChunk.AudioFormat}");
+                DebugLog($"{origName} - NumChannels: {wavData.FormatChunk.NumChannels}");
+                DebugLog($"{origName} - SampleRate: {wavData.FormatChunk.SampleRate}");
+                DebugLog($"{origName} - ByteRate: {wavData.FormatChunk.ByteRate}");
+                DebugLog($"{origName} - BlockAlign: {wavData.FormatChunk.BlockAlign}");
+                DebugLog($"{origName} - BitsPerSample: {wavData.FormatChunk.BitsPerSample}");
+                
+                float[] wavSoundData = wavData.GetSamples();
+                AudioClip audioClip = AudioClip.Create(origName, wavSoundData.Length / wavData.FormatChunk.NumChannels, wavData.FormatChunk.NumChannels, (int) wavData.FormatChunk.SampleRate, false);
+                audioClip.SetData(wavSoundData, 0);
+                return audioClip;
+                //return WavUtility.ToAudioClip($"{_dir}/{origName}.wav");
             }
 
-            Log($"Using original for \"{origName}\"");
+            DebugLog($"Using original for \"{origName}\"");
             return null;
+        }
+
+        private void DebugLog(string msg)
+        {
+            Log(msg);
+            Debug.Log("[CustomBgm] - " + msg);
+        }
+
+        private void DebugLog(object msg)
+        {
+            DebugLog($"{msg}");
         }
     }
 }
