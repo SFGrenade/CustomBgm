@@ -8,8 +8,8 @@
     <Description>A Hollow Knight Mod</Description>
     <Copyright>Copyright © SFGrenade 2024</Copyright>
     <PathMap>$(MSBuildProjectDirectory)=source</PathMap>
-    <AssemblyVersion>1.5.2.0</AssemblyVersion>
-    <FileVersion>1.5.2.0</FileVersion>
+    <AssemblyVersion>1.5.3.0</AssemblyVersion>
+    <FileVersion>1.5.3.0</FileVersion>
     <OutputPath>bin/$(Configuration)/</OutputPath>
     <LangVersion>latest</LangVersion>
     <NoWarn>8002</NoWarn>
