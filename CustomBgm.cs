@@ -43,7 +43,7 @@ namespace CustomBgm
         public override void Initialize()
         {
             DebugLog("Initializing");
-            
+
             DebugLog("Initialized");
         }
 
@@ -75,7 +75,7 @@ namespace CustomBgm
             }
 
             if (changed) ReflectionHelper.SetField<MusicCue, MusicCue.MusicChannelInfo[]>(musicCue, "channelInfos", infos);
-            
+
             yield return orig(self, musicCue, delayTime, transitionTime, applySnapshot);
         }
 
@@ -96,7 +96,7 @@ namespace CustomBgm
                 DebugLog($"{origName} - ByteRate: {wavData.FormatChunk.ByteRate}");
                 DebugLog($"{origName} - BlockAlign: {wavData.FormatChunk.BlockAlign}");
                 DebugLog($"{origName} - BitsPerSample: {wavData.FormatChunk.BitsPerSample}");
-                
+
                 float[] wavSoundData = wavData.GetSamples();
                 AudioClip audioClip = AudioClip.Create(origName, wavSoundData.Length / wavData.FormatChunk.NumChannels, wavData.FormatChunk.NumChannels, (int) wavData.FormatChunk.SampleRate, false);
                 audioClip.SetData(wavSoundData, 0);
