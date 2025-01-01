@@ -238,6 +238,6 @@ WhitePalace (White Palace):
   - `S30 White Palace.wav`
 
 # EUPL
-                      Copyright (c) 2024 SFGrenade
+                      Copyright (c) 2025 SFGrenade
                       Licensed under the EUPL-1.2
 https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
