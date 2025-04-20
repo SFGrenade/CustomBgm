@@ -15,14 +15,18 @@ public class CustomBgm : Mod
 
     private readonly string _folder = "CustomBgm";
 
+    private string _dirToUse;
+
     public CustomBgm() : base("Custom Background Music")
     {
-        _dir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? throw new DirectoryNotFoundException("I have no idea how you did this, but good luck figuring it out."), _folder);
+        _dir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, _folder);
 
         if (!Directory.Exists(_dir))
         {
             Directory.CreateDirectory(_dir);
         }
+
+        _dirToUse = _dir;
 
         InitCallbacks();
     }
@@ -51,6 +55,32 @@ public class CustomBgm : Mod
     {
         // Hooks
         On.AudioManager.BeginApplyMusicCue += OnAudioManagerBeginApplyMusicCue;
+
+        // CustomKnight hook
+        if (ModHooks.GetMod("CustomKnight") is Mod)
+        {
+            AddCustomKnightHandle();
+        }
+    }
+
+    private void AddCustomKnightHandle()
+    {
+        CustomKnight.SkinManager.OnSetSkin += ResetAudio;
+    }
+
+    private void ResetAudio(object sender, EventArgs e)
+    {
+        string currentSkinPath = CustomKnight.SkinManager.GetCurrentSkin().getSwapperPath();
+        // refer to `CustomKnight.SkinManager.DEFAULT_SKIN`
+        if (CustomKnight.SkinManager.GetCurrentSkin().GetId() == "Default")
+        {
+            // when default skin, use default folder lol
+            currentSkinPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
+        }
+        if (Directory.Exists(Path.Combine(currentSkinPath, _folder)))
+        {
+            _dirToUse = Path.Combine(currentSkinPath, _folder);
+        }
     }
 
     private IEnumerator OnAudioManagerBeginApplyMusicCue(On.AudioManager.orig_BeginApplyMusicCue orig, AudioManager self, MusicCue musicCue, float delayTime, float transitionTime, bool applySnapshot)
@@ -81,10 +111,10 @@ public class CustomBgm : Mod
 
     private AudioClip GetAudioClip(string origName)
     {
-        if (File.Exists($"{_dir}/{origName}.wav"))
+        if (File.Exists($"{_dirToUse}/{origName}.wav"))
         {
             DebugLog($"Using audio file \"{origName}.wav\"");
-            FileStream stream = File.OpenRead($"{_dir}/{origName}.wav");
+            FileStream stream = File.OpenRead($"{_dirToUse}/{origName}.wav");
             WavData.Inspect(stream, DebugLog);
             WavData wavData = new WavData();
             wavData.Parse(stream, DebugLog);
@@ -101,7 +131,7 @@ public class CustomBgm : Mod
             AudioClip audioClip = AudioClip.Create(origName, wavSoundData.Length / wavData.FormatChunk.NumChannels, wavData.FormatChunk.NumChannels, (int) wavData.FormatChunk.SampleRate, false);
             audioClip.SetData(wavSoundData, 0);
             return audioClip;
-            //return WavUtility.ToAudioClip($"{_dir}/{origName}.wav");
+            //return WavUtility.ToAudioClip($"{_dirToUse}/{origName}.wav");
         }
 
         DebugLog($"Using original for \"{origName}\"");
