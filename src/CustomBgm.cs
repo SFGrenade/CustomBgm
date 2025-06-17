@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -17,6 +18,8 @@ public class CustomBgm : Mod
 
     private string _dirToUse;
 
+    private Dictionary<string, AudioClip> _audioClipCache = new Dictionary<string, AudioClip>();
+
     public CustomBgm() : base("Custom Background Music")
     {
         _dir = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, _folder);
@@ -27,8 +30,43 @@ public class CustomBgm : Mod
         }
 
         _dirToUse = _dir;
+        CacheAudioFiles();
 
         InitCallbacks();
+    }
+
+    private void CacheAudioFiles()
+    {
+        _audioClipCache.Clear();
+
+        DirectoryInfo directoryInfo = new DirectoryInfo(_dirToUse);
+        foreach (FileInfo fileInfo in directoryInfo.GetFiles())
+        {
+            if (fileInfo.Extension == ".wav")
+            {
+                string fullFilename = fileInfo.Name;
+                string mainFilename = Path.GetFileNameWithoutExtension(fullFilename);
+                DebugLog($"Caching audio file \"{fullFilename}\"");
+                FileStream stream = File.OpenRead(fileInfo.FullName);
+                WavData.Inspect(stream, DebugLog);
+                WavData wavData = new WavData();
+                wavData.Parse(stream, DebugLog);
+                stream.Close();
+
+                DebugLog($"{mainFilename} - AudioFormat: {wavData.FormatChunk.AudioFormat}");
+                DebugLog($"{mainFilename} - NumChannels: {wavData.FormatChunk.NumChannels}");
+                DebugLog($"{mainFilename} - SampleRate: {wavData.FormatChunk.SampleRate}");
+                DebugLog($"{mainFilename} - ByteRate: {wavData.FormatChunk.ByteRate}");
+                DebugLog($"{mainFilename} - BlockAlign: {wavData.FormatChunk.BlockAlign}");
+                DebugLog($"{mainFilename} - BitsPerSample: {wavData.FormatChunk.BitsPerSample}");
+
+                float[] wavSoundData = wavData.GetSamples();
+                AudioClip audioClip = AudioClip.Create(mainFilename, wavSoundData.Length / wavData.FormatChunk.NumChannels, wavData.FormatChunk.NumChannels, (int) wavData.FormatChunk.SampleRate, false);
+                audioClip.SetData(wavSoundData, 0);
+                GameObject.DontDestroyOnLoad(audioClip);
+                _audioClipCache.Add(mainFilename, audioClip);
+            }
+        }
     }
 
     public override string GetVersion()
@@ -55,6 +93,8 @@ public class CustomBgm : Mod
     {
         // Hooks
         On.AudioManager.BeginApplyMusicCue += OnAudioManagerBeginApplyMusicCue;
+        // colosseum bgm special case
+        On.HutongGames.PlayMaker.Actions.AudioPlaySimple.OnEnter += OnAudioPlaySimpleOnEnter;
 
         // CustomKnight hook
         if (ModHooks.GetMod("CustomKnight") is Mod)
@@ -80,6 +120,7 @@ public class CustomBgm : Mod
         if (Directory.Exists(Path.Combine(currentSkinPath, _folder)))
         {
             _dirToUse = Path.Combine(currentSkinPath, _folder);
+            CacheAudioFiles();
         }
     }
 
@@ -109,31 +150,43 @@ public class CustomBgm : Mod
         yield return orig(self, musicCue, delayTime, transitionTime, applySnapshot);
     }
 
+    private void OnAudioPlaySimpleOnEnter(On.HutongGames.PlayMaker.Actions.AudioPlaySimple.orig_OnEnter orig, HutongGames.PlayMaker.Actions.AudioPlaySimple self)
+    {
+        if (self.oneShotClip != null && self.oneShotClip.Value != null)
+        {
+            AudioClip possibleReplace = GetAudioClip(self.oneShotClip.Value.name);
+            if (possibleReplace != null)
+            {
+                self.oneShotClip.Value = possibleReplace;
+            }
+        }
+        else
+        {
+            // otherwise try existing audioclip on gameobjects audio
+            GameObject owner = self.Fsm.GetOwnerDefaultTarget(self.gameObject);
+            if (owner != null)
+            {
+                AudioSource src = owner.GetComponent<AudioSource>();
+                if (src != null && src.clip != null)
+                {
+                    AudioClip possibleReplace = GetAudioClip(src.clip.name);
+                    if (possibleReplace != null)
+                    {
+                        src.clip = possibleReplace;
+                    }
+                }
+            }
+        }
+        orig(self);
+    }
+
     private AudioClip GetAudioClip(string origName)
     {
-        if (File.Exists($"{_dirToUse}/{origName}.wav"))
+        if (_audioClipCache.ContainsKey(origName))
         {
-            DebugLog($"Using audio file \"{origName}.wav\"");
-            FileStream stream = File.OpenRead($"{_dirToUse}/{origName}.wav");
-            WavData.Inspect(stream, DebugLog);
-            WavData wavData = new WavData();
-            wavData.Parse(stream, DebugLog);
-            stream.Close();
-
-            DebugLog($"{origName} - AudioFormat: {wavData.FormatChunk.AudioFormat}");
-            DebugLog($"{origName} - NumChannels: {wavData.FormatChunk.NumChannels}");
-            DebugLog($"{origName} - SampleRate: {wavData.FormatChunk.SampleRate}");
-            DebugLog($"{origName} - ByteRate: {wavData.FormatChunk.ByteRate}");
-            DebugLog($"{origName} - BlockAlign: {wavData.FormatChunk.BlockAlign}");
-            DebugLog($"{origName} - BitsPerSample: {wavData.FormatChunk.BitsPerSample}");
-
-            float[] wavSoundData = wavData.GetSamples();
-            AudioClip audioClip = AudioClip.Create(origName, wavSoundData.Length / wavData.FormatChunk.NumChannels, wavData.FormatChunk.NumChannels, (int) wavData.FormatChunk.SampleRate, false);
-            audioClip.SetData(wavSoundData, 0);
-            return audioClip;
-            //return WavUtility.ToAudioClip($"{_dirToUse}/{origName}.wav");
+            // audioclip is in cache
+            return _audioClipCache[origName];
         }
-
         DebugLog($"Using original for \"{origName}\"");
         return null;
     }
