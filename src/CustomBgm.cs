@@ -64,7 +64,7 @@ public class CustomBgm : Mod
                 AudioClip audioClip = AudioClip.Create(mainFilename, wavSoundData.Length / wavData.FormatChunk.NumChannels, wavData.FormatChunk.NumChannels, (int) wavData.FormatChunk.SampleRate, false);
                 audioClip.SetData(wavSoundData, 0);
                 GameObject.DontDestroyOnLoad(audioClip);
-                _audioClipCache.Add(mainFilename, audioClip);
+                _audioClipCache.Add(mainFilename.ToUpper(), audioClip);
             }
         }
     }
@@ -182,10 +182,10 @@ public class CustomBgm : Mod
 
     private AudioClip GetAudioClip(string origName)
     {
-        if (_audioClipCache.ContainsKey(origName))
+        if (_audioClipCache.ContainsKey(origName.ToUpper()))
         {
             // audioclip is in cache
-            return _audioClipCache[origName];
+            return _audioClipCache[origName.ToUpper()];
         }
         DebugLog($"Using original for \"{origName}\"");
         return null;
