@@ -90,7 +90,7 @@ EnemyBattle (Miscelaneous battles):
   - `S18 Enemy Battle-02 LOOP.wav`
 
 FogCanyon (Fog Canyon):
-  - `S5 Fog Canyon V2.wav`
+  - `S5 Fog Canyon v2.wav`
   - `S19 Optional Drone.wav`
 
 Fungus (Fungal Wastes):
